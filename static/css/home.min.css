@@ -46,6 +46,15 @@
   --fa-style-family-classic: "Font Awesome 6 Free";
   --fa-font-solid: normal 900 1em/1 "Font Awesome 6 Free";
 }
+
+
+#animeflix_icon {
+  width: 159px;
+  height: 157px;
+  height: 46px;
+  margin-left: -108px;
+}
+
 body,
 html {
   background-color: #282828;

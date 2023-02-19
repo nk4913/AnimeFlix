@@ -31,6 +31,14 @@
   --fa-style-family-classic: "Font Awesome 6 Free";
   --fa-font-solid: normal 900 1em/1 "Font Awesome 6 Free";
 }
+
+#animeflix_icon {
+  width: 159px;
+  height: 157px;
+  height: 46px;
+  margin-left: -108px;
+}
+
 body,
 html {
   background-color: #282828;
@@ -60,11 +68,23 @@ footer a {
   footer a {
     font-size: 13px;
   }
+  #animeflix_icon {
+    width: 159px;
+    height: 157px;
+    height: 46px;
+    margin-left: -108px;
+}
 }
 @media only screen and (min-width: 600px) {
   footer a {
     font-size: 15px;
   }
+  #animeflix_icon {
+    width: 159px;
+    height: 157px;
+    height: 46px;
+    margin-left: -108px;
+}
 }
 #head-div {
     background: linear-gradient(to right, #340889 40%, #f44343);
