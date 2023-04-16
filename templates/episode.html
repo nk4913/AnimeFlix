@@ -4,7 +4,7 @@
 <head>
     <link rel="icon" type="image/x-icon"
         href="{{ url_for('static', filename='img/favicon.png')}}">
-    <title>Watch Episode {{ title }} - {{ heading }} - AnimeDex</title>
+    <title>Watch Episode {{ title }} - {{ heading }} - AnimeFlix/title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="title" content="Watch Episode {{ title }} - {{ heading }} - AnimeDex">
     <meta name="description"
@@ -25,10 +25,10 @@
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="AnimeDex">
     <meta property="og:url" content="https://animedex.live/">
-    <meta itemprop="image" content="https://cdn.jsdelivr.net/gh/TechShreyash/AnimeDex@main/static/img/home.png">
-    <meta property="og:image" content="https://cdn.jsdelivr.net/gh/TechShreyash/AnimeDex@main/static/img/home.png">
+    <meta itemprop="image" content="https://cdn.jsdelivr.net/gh/TechShreyash/AnimeDex@main/screenshots/home.jpeg">
+    <meta property="og:image" content="https://cdn.jsdelivr.net/gh/TechShreyash/AnimeDex@main/screenshots/home.jpeg">
     <meta property="og:image:secure_url"
-        content="https://cdn.jsdelivr.net/gh/TechShreyash/AnimeDex@main/static/img/home.png">
+        content="https://cdn.jsdelivr.net/gh/TechShreyash/AnimeDex@main/screenshots/home.jpeg">
     <meta property="og:image:width" content="650">
     <meta property="og:image:height" content="350">
     <meta property="twitter:title" content="Watch Episode {{ title }} - {{ heading }} - AnimeDex">
@@ -38,7 +38,7 @@
     <meta property="twitter:card" content="summary">
     <meta name="apple-mobile-web-app-status-bar" content="#202125">
     <meta name="theme-color" content="#202125">
-    <link href="{{ url_for('static', filename='css/anime.min.css')}} rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/gh/TechShreyash/AnimeDex@main/static/css/episode.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
 </head>
 
@@ -46,7 +46,7 @@
     <header id="head-div">
         <div id="title1">
             <a href="/"><img src="https://animixplay.b-cdn.net/wp-content/uploads/2022/10/cropped-animixplaylogo-1.png"
-                    alt="AnimeDex"></a>
+                alt="AnimeDex"></a>
         </div>
         <div id="search-div">
             <form action="/search" method='GET'>
@@ -94,8 +94,7 @@
     <hr>
     <footer>
         <div>
-            <a href="https://github.com/TechShreyash" target="_blank">MADE WITH <i class="fa fa-heart pulse"></i>BY TECH
-                SHREYASH</a> <a href="https://TechZBots.t.me" target="_blank">(@TechZBots)</a>
+            <a href="https://github.com/TechShreyash" target="_blank">MADE WITH <i class="fa fa-heart pulse"></i>BY Nanashi</a> <a href="#" target="_blank">(@nanashi)</a>
         </div>
     </footer>
     <hr>
@@ -104,11 +103,16 @@
             const buttons = document.getElementsByClassName('sobtn');
             const iframe = document.getElementById('AnimeDexFrame');
             iframe.src = btn.getAttribute('data-value');
-            for (let i = 1; i < buttons.length; i++) {
+            for (let i = 0; i < buttons.length; i++) {
                 buttons[i].className = "sobtn";
             }
             btn.className = "sobtn sactive";
         };
+
+        function showDownload() {
+        document.getElementById('showdl').style.display = "none";
+        document.getElementById('dldiv').classList.toggle('show');
+    }
     </script>
 </body>
 

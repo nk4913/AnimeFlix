@@ -1,209 +1,242 @@
-from programs.anime_loader import get_GPage, get_html
 from programs.db import update_views, update_watch
-from programs.html_gen import animeRecHtml, episodeHtml, get_eps_html, get_eps_html2, get_recent_html, get_search_html, get_selector_btns, get_genre_html, get_trending_html, slider_gen
+from programs.html_gen import (
+    animeRecHtml,
+    animeRecHtml2,
+    episodeHtml,
+    get_eps_html,
+    get_eps_html2,
+    get_recent_html,
+    get_search_html,
+    get_selector_btns,
+    get_genre_html,
+    get_trending_html,
+    slider_gen,
+)
 from flask import Flask, render_template, request, redirect
 from programs.anilist import Anilist
 from programs.others import get_atitle, get_other_title, get_studios, get_t_from_u
-from programs.gogo import GoGoApi
-from programs.vidstream import extract_m3u8
+from programs.techzapi import TechZApi
+from config import API_KEY
 
-GOGO = GoGoApi()
 app = Flask(__name__)
+TechZApi = TechZApi(API_KEY)
 
 
-@app.route('/favicon.ico')
+@app.route("/favicon.ico")
 def favicon():
-    return redirect('https://cdn.jsdelivr.net/gh/TechShreyash/AnimeDex@main/static/img/favicon.ico')
+    return redirect(
+        "https://cdn.jsdelivr.net/gh/TechShreyash/AnimeDex@main/static/img/favicon.ico"
+    )
 
 
-@app.route('/')
+@app.route("/")
 def home():
-    html = render_template('home.min.html')
-    div1 = get_trending_html()
-    try:
-        div2 = get_recent_html(GOGO.home())
-    except:
-        div2 = ''
+    html = render_template("home.html")
+    div1 = get_trending_html(TechZApi.top_animedex())
+    div2 = get_recent_html(TechZApi.gogo_latest())
     sliders = slider_gen()
 
-    html = html.replace(
-        'MOST_POPULAR',
-        div1
-    ).replace(
-        'RECENT_RELEASE',
-        div2
-    ).replace(
-        'SLIDERS',
-        sliders
+    html = (
+        html.replace("MOST_POPULAR", div1)
+        .replace("RECENT_RELEASE", div2)
+        .replace("SLIDERS", sliders)
     )
-    update_views('home-animedex')
+    update_views("home-animedex")
     return html
 
 
-@app.route('/anime/<anime>')
+@app.route("/anime/<anime>")
 def get_anime(anime):
     try:
-        data = GOGO.anime(anime)
-        title = data[0]
-        synopsis = data[1]
-        names = data[2]
-        studios = data[3]
-        episodes = data[4]
-        genres = get_genre_html(data[5])
-        img = data[6]
-        dub = data[7]
-        season = data[8]
-        year = data[9]
-        typo = data[10]
-        status = data[11]
+        data = TechZApi.gogo_anime(anime)
+        TITLE = data.get("title")
+        IMG = data.get("img")
+        LANG = data.get("lang")
+        TYPE = data.get("type")
+        WATCHNOW = "/episode/" + data.get("id") + "/1"
+        OTHER = data.get("other name")
+        TOTAL = str(data.get("total_ep"))
+        YEAR = data.get("year")
+        STATUS = data.get("status")
+        STUDIO = "?"
+        GENERES = get_genre_html(data.get("genre").split(","))
+        SYNOPSIS = data.get("summary")
+
         x = anime.lower()
-        if x.endswith('-dub'):
+        if x.endswith("-dub"):
             x = x[:-4]
-        if x.endswith('-sub'):
+        if x.endswith("-sub"):
             x = x[:-4]
-        x = get_t_from_u(x).replace('-', ' ')
-        displayAnime = animeRecHtml(Anilist().get_recommendation(x))
-        ep_html, watch = get_eps_html(anime, anime)
+        x = get_t_from_u(x).replace("-", " ")
+
+        try:
+            DISPLAY_ANIME = animeRecHtml(Anilist().get_recommendation(x))
+        except:
+            DISPLAY_ANIME = ""
+        EPISODES = get_eps_html(data=data.get("episodes"))
+
+        html = render_template(
+            "anime.html",
+            IMG=IMG,
+            TITLE=TITLE,
+            LANG=LANG,
+            TYPE=TYPE,
+            WATCHNOW=WATCHNOW,
+            OTHER=OTHER,
+            TOTAL=TOTAL,
+            YEAR=YEAR,
+            STATUS=STATUS,
+            STUDIO=STUDIO,
+        )
     except:
         anime = anime.lower()
-        if anime.endswith('-dub'):
+        if anime.endswith("-dub"):
             anime = anime[:-4]
-        if anime.endswith('-sub'):
+        if anime.endswith("-sub"):
             anime = anime[:-4]
-        anime = get_t_from_u(anime).replace('-', ' ')
+        anime = get_t_from_u(anime).replace("-", " ")
         data = Anilist().anime(anime)
 
-        img = data.get('coverImage').get('medium').replace('small', 'medium')
-        if not img:
-            img = data.get('bannerImage')
-        title = get_atitle(data.get('title'))
-        synopsis = data.get('description')
-        names = get_other_title(data.get('title'))
-        studios = get_studios(data.get('studios').get('nodes'))
-        episodes = str(data.get('episodes'))
-        genres = get_genre_html(data.get('genres'))
-        displayAnime = animeRecHtml(data.get('recommendations').get('edges'))
+        IMG = data.get("coverImage").get("medium").replace("small", "medium")
+        if not IMG:
+            IMG = data.get("bannerImage")
+        TITLE = get_atitle(data.get("title"))
+        SYNOPSIS = data.get("description")
+        OTHER = get_other_title(data.get("title"))
+        STUDIO = get_studios(data.get("studios").get("nodes"))
+        TOTAL = str(data.get("episodes"))
+        GENERES = get_genre_html(data.get("genres"))
+        DISPLAY_ANIME = animeRecHtml2(data.get("recommendations").get("edges"))
+
         try:
-            ep_html, watch = get_eps_html(anime)
+            EPISODES, id = get_eps_html(api=TechZApi, anime=TITLE)
         except:
-            ep_html, watch = '', '#'
-        dub = data.get('format')
-        season = data.get('season')
-        year = data.get('seasonYear')
-        typo = data.get('format')
-        status = data.get('status')
+            EPISODES, id = "", "#"
 
-    html = render_template('anime.min.html',
-                           img=img,
-                           title=title,
-                           DUB=dub,
-                           SEASON=season,
-                           other=names,
-                           studios=studios,
-                           episodes=episodes,
-                           year=year,
-                           ATYPE=typo,
-                           status=status,
-                           animeURL=f'/anime/{anime}',
-                           WATCHNOW=f'/episode/{watch}',
-                           aid=anime
-                           )
+        SEASON = str(data.get("season")) + " " + str(data.get("seasonYear"))
+        YEAR = data.get("seasonYear")
+        TYPE = data.get("format")
+        STATUS = data.get("status")
+        WATCHNOW = "/episode/" + id + "/1"
 
-    html = html.replace('GENEROS', genres)
-    html = html.replace('EPISOS', ep_html)
-    html = html.replace('DISPLAY_ANIME', displayAnime)
-    html = html.replace('SYNOP', synopsis)
+        html = render_template(
+            "anime.html",
+            IMG=IMG,
+            TITLE=TITLE,
+            LANG=TYPE,
+            TYPE=SEASON,
+            WATCHNOW=WATCHNOW,
+            OTHER=OTHER,
+            TOTAL=TOTAL,
+            YEAR=YEAR,
+            STATUS=STATUS,
+            STUDIO=STUDIO,
+        )
+
+    html = html.replace("GENERES", GENERES)
+    html = html.replace("EPISODES", EPISODES)
+    html = html.replace("DISPLAY_ANIME", DISPLAY_ANIME)
+    html = html.replace("SYNOPSIS", SYNOPSIS)
     update_views(anime)
     return html
 
 
-@app.route('/episode/<anime>/<episode>')
+@app.route("/episode/<anime>/<episode>")
 def get_episode(anime, episode):
     anime = get_t_from_u(anime).lower()
     episode = int(episode)
 
     try:
-        total_eps, ep = GOGO.get_episodes(anime)
-        eps = GOGO.get_links(ep[episode-1])
-        ep_list = get_eps_html2(ep)
+        data = TechZApi.gogo_episode(f"{anime}-episode-{episode}")
+        x = TechZApi.gogo_anime(anime)
+        total_eps = x.get("total_ep")
+        ep_list = x.get("episodes")
     except:
-        search = GOGO.search(anime, True)
-        total_eps, ep = GOGO.get_episodes(search[0])
-        eps = GOGO.get_links(ep[episode-1])
-        ep_list = get_eps_html2(ep)
+        search = TechZApi.gogo_search(anime)[0]
+        anime = search.get("id")
+        total_eps = search.get("total_ep")
+        ep_list = search.get("episodes")
+        data = TechZApi.gogo_episode(f"{anime}-episode-{episode}")
 
-    aid = ep[episode-1].split('-episode-')[0]
-
-    btn_html = get_selector_btns(
-        f"/episode/{anime}/", int(episode), int(total_eps))
-    ep_html, iframe = episodeHtml(eps, f'{anime} - Episode {episode}')
+    ep_list = get_eps_html2(ep_list)
+    btn_html = get_selector_btns(f"/episode/{anime}/", int(episode), int(total_eps))
+    ep_html, iframe = episodeHtml(data, f"{anime} - Episode {episode}")
 
     temp = render_template(
-        'episode.min.html',
-        title=f'{anime} - Episode {episode}',
+        "episode.html",
+        title=f"{anime} - Episode {episode}",
         heading=anime,
-        iframe=iframe
+        iframe=iframe,
     )
 
-    update_watch(aid)
-    return temp.replace('PROSLO', btn_html).replace('SERVER', ep_html).replace('EPISOS', ep_list)
+    update_watch(anime)
+    return (
+        temp.replace("PROSLO", btn_html)
+        .replace("SERVER", ep_html)
+        .replace("EPISOS", ep_list)
+    )
 
 
-@app.route('/search', methods=['GET'])
+@app.route("/search", methods=["GET"])
 def search_anime():
-    anime = request.args.get('query').lower().strip()
+    anime = request.args.get("query").lower().strip()
 
-    if anime.endswith('-dub'):
+    if anime.endswith("-dub"):
         anime = anime[:-4]
-    if anime.endswith('-sub'):
+    if anime.endswith("-sub"):
         anime = anime[:-4]
 
-    html = render_template('search.min.html',
-                           aid=anime.replace('+', ' '))
+    html = render_template("search.html", aid=anime.replace("+", " "))
 
-    data = GOGO.search(anime)
+    data = TechZApi.gogo_search(anime)
     display = get_search_html(data)
 
-    html = html.replace(
-        'SEARCHED',
-        display
-    )
-    update_views('search-animedex')
+    html = html.replace("SEARCHED", display)
+    update_views("search-animedex")
     return html
 
 
-@app.route('/embed')
+@app.route("/embed")
 def get_embed():
-    url = request.args.get('url')
-    file = False
-    if url:
-        if 'playgo1' in url:
-            if request.args.get('token'):
-                url += f'&token={request.args.get("token")}'
-            if request.args.get('expires'):
-                url += f'&expires={request.args.get("expires")}'
+    try:
+        url = request.args.get("url")
+        file = False
+        if url:
+            if ".mp4" in url or ".mkv" in url:
+                file = url
+            else:
+                if request.args.get("token"):
+                    url += f'&token={request.args.get("token")}'
+                if request.args.get("expires"):
+                    url += f'&expires={request.args.get("expires")}'
 
-            file = extract_m3u8(url)
-        elif '.mp4' in url or '.mkv' in url:
-            file = url
-    else:
-        file = request.args.get('file')
+                file = TechZApi.gogo_stream(url)
+                server = int(request.args.get("server"))
+                if server == 1:
+                    file = file.get("source")[0].get("file")
+                elif server == 2:
+                    file = file.get("source_bk")[0].get("file")
+        else:
+            file = request.args.get("file")
+    except Exception as e:
+        print(e)
+        file = request.args.get("file")
     if not file:
         return redirect(url)
-    title = request.args.get('title')
+    title = request.args.get("title")
 
-    return render_template('vid.html', m3u8=file, title=title)
+    return render_template("vid.html", m3u8=file, title=title)
 
 
-@app.route('/api/latest/<page>')
+@app.route("/api/latest/<page>")
 def latest(page):
     try:
-        data = get_GPage(page)
-        html = get_html(data)
-        return {'html': html}
+        data = TechZApi.gogo_latest(page)
+        html = get_recent_html(data)
+        return {"html": html}
     except:
-        return {'html': ''}
+        return {"html": ""}
 
 
-if __name__ == '__main__':
-    app.run('0.0.0.0', debug=True)
+if __name__ == "__main__":
+    app.run("0.0.0.0", debug=True)

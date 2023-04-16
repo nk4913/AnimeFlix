@@ -1,13 +1,13 @@
 import requests
 import random
-from programs.gogo import Anime, GoGoApi
 from programs.others import get_atitle, get_genre, get_t_from_u, get_urls
 from programs.anilist import Anilist
+from programs.techzapi import TechZApi
 
 
 def get_genre_html(li):
     x = """<a>{}</a>"""
-    html = ''
+    html = ""
 
     for i in li:
         html += x.format(i.strip())
@@ -15,27 +15,32 @@ def get_genre_html(li):
     return html
 
 
-def get_eps_html(anime, aid=None):
-    if not aid:
-        aid = GoGoApi().search(anime, True)[0].strip()
-    total, data = GoGoApi().get_episodes(aid)
+def get_eps_html(data=None, api: TechZApi = None, anime=None):
+    if not data:
+        anime = api.gogo_search(anime)[0].get("id").strip()
+        data = api.gogo_anime(anime).get("episodes")
+
     x = """<a class="ep-btn" href="{}">{}</a>"""
-    html = ''
+    html = ""
     pos = 1
+
     for i in data:
-        i = i.replace('-episode-', '/')
-        html += x.format(f'/episode/{i}', str(pos))
+        i = i.replace("-episode-", "/")
+        html += x.format(f"/episode/{i}", str(pos))
         pos += 1
-    return html, data[0].replace('-episode-', '/')
+
+    if api:
+        return html, anime
+    return html
 
 
 def get_eps_html2(data):
     x = """<a class="ep-btn" href="{}">{}</a>"""
-    html = ''
+    html = ""
     pos = 1
     for i in data:
-        i = i.replace('-episode-', '/')
-        html += x.format(f'/episode/{i}', str(pos))
+        i = i.replace("-episode-", "/")
+        html += x.format(f"/episode/{i}", str(pos))
         pos += 1
     return html
 
@@ -47,30 +52,30 @@ ANIME_POS2 = """<a href="{}"><div class="poster la-anime"> <div id="shadow1" cla
 
 def animeRecHtml(data):
     if not data:
-        return 'Not Available'
+        return "Not Available"
 
     if len(data) == 0:
-        return 'Not Available'
+        return "Not Available"
 
-    html = ''
+    html = ""
 
-    for i in data:
-        i = i.get('node').get('mediaRecommendation')
-        img = i.get('coverImage')
+    for i in data.get("recommendations").get("edges"):
+        i = i.get("node").get("mediaRecommendation")
+        img = i.get("coverImage")
         if img:
-            img = img.get('medium').replace('small', 'medium')
+            img = img.get("medium").replace("small", "medium")
         else:
-            img = i.get('bannerImage')
-        title = get_atitle(i.get('title'))
+            img = i.get("bannerImage")
+        title = get_atitle(i.get("title"))
         url = get_urls(title)
         x = ANIME_POS.format(
             url,
-            str(i.get('meanScore')).strip()+' / 100',
-            'Ep '+str(i.get('episodes')).strip(),
+            str(i.get("meanScore")).strip() + " / 100",
+            "Ep " + str(i.get("episodes")).strip(),
             img,
             title,
-            i.get('format'),
-            i.get('status')
+            i.get("format"),
+            i.get("status"),
         )
         if x not in html:
             html += x
@@ -78,42 +83,69 @@ def animeRecHtml(data):
     return html
 
 
-def get_trending_html():
-    data: dict = requests.get(
-        'https://api.animedex.live/top').json().get('top')
-    html = ''
-    for id, i in data:
-        img = i[5]
-        title = i[0]
-        url = get_urls(id)
+def animeRecHtml2(data):
+    if not data:
+        return "Not Available"
+
+    if len(data) == 0:
+        return "Not Available"
+
+    html = ""
+
+    for i in data:
+        i = i.get("node").get("mediaRecommendation")
+        
+        img = i.get("coverImage")
+        if img:
+            img = img.get("medium").replace("small", "medium")
+        else:
+            img = i.get("bannerImage")
+        title = get_atitle(i.get("title"))
+        url = get_urls(title)
         x = ANIME_POS.format(
             url,
-            i[1],
-            'Ep '+str(i[2]),
+            str(i.get("meanScore")).strip() + " / 100",
+            "Ep " + str(i.get("episodes")).strip(),
             img,
             title,
-            i[3],
-            i[4]
+            i.get("format"),
+            i.get("status"),
         )
-        html += x
+        if x not in html:
+            html += x
 
     return html
 
 
-def get_search_html(data: Anime):
-    html = ''
+def get_trending_html(data):
+    html = ""
+    for id, i in data:
+        try:
+            img = i[5]
+            title = i[0]
+            url = get_urls(id)
+            x = ANIME_POS.format(url, i[1], "Ep " + str(i[2]), img, title, i[3], i[4])
+            html += x
+        except:
+            pass
+
+    return html
+
+
+def get_search_html(data):
+    html = ""
 
     for i in data:
-        if 'dub' in i.url.lower():
-            d = 'DUB'
+        if "dub" in i.get("id").lower():
+            d = "DUB"
         else:
-            d = 'SUB'
+            d = "SUB"
         x = ANIME_POS2.format(
-            '/anime/'+i.url,
+            "/anime/" + i.get("id"),
             d,
-            i.img,
-            i.title,
-            i.lang,
+            i.get("img"),
+            i.get("title"),
+            "Released: " + i.get("year"),
         )
         html += x
 
@@ -121,19 +153,18 @@ def get_search_html(data: Anime):
 
 
 def get_recent_html(data):
-    html = ''
+    html = ""
 
     for i in data:
-        i: Anime
-
+        url = i.get("id").split("-episode-")[0]
         x = ANIME_POS.format(
-            i.url,
-            i.lang,
-            'Ep '+str(i.episode).strip(),
-            i.img,
-            i.title,
-            f'Latest {i.lang}',
-            'HD'
+            f"/anime/{url}",
+            i.get("lang"),
+            "Ep " + str(i.get("episode")),
+            i.get("img"),
+            i.get("title"),
+            f"Latest {i.get('lang')}",
+            "HD",
         )
         html += x
 
@@ -142,32 +173,36 @@ def get_recent_html(data):
 
 def get_selector_btns(url, current, episodes):
     if episodes < 2:
-        return ''
+        return ""
 
-    selector = ''
+    selector = ""
 
     if current == 1:
         x = """<a class="btns" href="usrl"><button class="sbtn inline-flex text-white bg-indigo-500 border-0 py-2 px-6 focus:outline-none hover:bg-indigo-600 rounded text-lg ">Episode NEXT<i style="margin-left:10px; margin-right: auto;" class="fa fa-arrow-circle-right"></i></button></a>"""
 
-        selector += x.replace('usrl', url +
-                              str(current+1)).replace('NEXT', str(current+1))
+        selector += x.replace("usrl", url + str(current + 1)).replace(
+            "NEXT", str(current + 1)
+        )
 
     elif current == episodes:
         x = """<a class="btns" href="usrl"><button class="sbtn inline-flex text-white bg-indigo-500 border-0 py-2 px-6 focus:outline-none hover:bg-indigo-600 rounded text-lg "><i class="fa fa-arrow-circle-left"></i>Episode PREV</button></a>"""
 
-        selector += x.replace('usrl', url + str(current-1)).replace(
-            'PREV', str(current-1))
+        selector += x.replace("usrl", url + str(current - 1)).replace(
+            "PREV", str(current - 1)
+        )
 
     else:
         x = """<a class="btns" href="usrl"><button class="sbtn inline-flex text-white bg-indigo-500 border-0 py-2 px-6 focus:outline-none hover:bg-indigo-600 rounded text-lg "><i class="fa fa-arrow-circle-left"></i>Episode PREV</button></a>"""
 
-        selector += x.replace('usrl',
-                              url + str(current-1)).replace('PREV', str(current-1))
+        selector += x.replace("usrl", url + str(current - 1)).replace(
+            "PREV", str(current - 1)
+        )
 
         x = """<a class="btns" href="usrl"><button class="sbtn inline-flex text-white bg-indigo-500 border-0 py-2 px-6 focus:outline-none hover:bg-indigo-600 rounded text-lg ">Episode NEXT<i style="margin-left:10px; margin-right: auto;" class="fa fa-arrow-circle-right"></i></button></a>"""
 
-        selector += x.replace('usrl',
-                              url + str(current+1)).replace('NEXT', str(current+1))
+        selector += x.replace("usrl", url + str(current + 1)).replace(
+            "NEXT", str(current + 1)
+        )
     return selector
 
 
@@ -177,28 +212,31 @@ SLIDER_HTML = """<div class="mySlides fade"> <div class="data-slider"> <p class=
 def slider_gen():
     data = Anilist().trending()
     random.shuffle(data)
-    html = ''
+    html = ""
     pos = 1
 
     for i in data:
-        img = i.get('bannerImage')
+        img = i.get("bannerImage")
         if not img:
-            img = i.get('coverImage').get('medium').replace(
-                'small', 'large').replace('medium', 'large')
-        title = get_atitle(i.get('title'))
+            img = (
+                i.get("coverImage")
+                .get("medium")
+                .replace("small", "large")
+                .replace("medium", "large")
+            )
+        title = get_atitle(i.get("title"))
         url = get_urls(title)
         temp = SLIDER_HTML.format(
-            f'#{pos} Spotlight',
+            f"#{pos} Spotlight",
             title,
-            i.get('type'),
-            i.get('status'),
-            get_genre(i.get('genres')),
-            i.get('description'),
-            url.replace(
-                '/anime/', '/episode/')+'/1',
+            i.get("type"),
+            i.get("status"),
+            get_genre(i.get("genres")),
+            i.get("description"),
+            url.replace("/anime/", "/episode/") + "/1",
             url,
             url,
-            img
+            img,
         )
         html += temp
         pos += 1
@@ -206,17 +244,17 @@ def slider_gen():
 
 
 def episodeHtml(episode, title):
-    isSub = episode.get('SUB')
-    isDub = episode.get('DUB')
-    DL = episode.get('DL')
-    sub = dub = ''
+    isSub = episode.get("SUB")
+    isDub = episode.get("DUB")
+    DL = episode.get("DL")
+    sub = dub = dlsub = dldub = ""
     defa = 0
     s, d = 1, 1
 
     if isSub:
         for i in isSub:
             if defa == 0:
-                defa = f'/embed?url={i}&title={title}'
+                defa = f"/embed?url={i}&title={title}"
                 sub += f"""<div class="sitem"> <a class="sobtn sactive" onclick="selectServer(this)" data-value="/embed?url={i}&title={title}">Server{s}</a> </div>"""
             else:
                 sub += f"""<div class="sitem"> <a class="sobtn" onclick="selectServer(this)" data-value="/embed?url={i}&title={title}">Server{s}</a> </div>"""
@@ -225,28 +263,42 @@ def episodeHtml(episode, title):
     if isDub:
         for i in isDub:
             if defa == 0:
-                defa = f'/embed?url={i}&title={title}'
+                defa = f"/embed?url={i}&title={title}"
                 dub += f"""<div class="sitem"> <a class="sobtn sactive" onclick="selectServer(this)" data-value="/embed?url={i}&title={title}">Server{d}</a> </div>"""
             else:
                 dub += f"""<div class="sitem"> <a class="sobtn" onclick="selectServer(this)" data-value="/embed?url={i}&title={title}">Server{d}</a> </div>"""
             d += 1
 
     if DL:
-        link = DL.get('SUB')
+        link = DL.get("SUB")
         if link:
-            sub += f"""<div class="sitem"> <a class="sobtn download" target="_blank" href="{link}"><i class="fa fa-download"></i>Download</a> </div>"""
-        link = DL.get('DUB')
+            for n, l in link.items():
+                dlsub += f"""<div class="sitem"> <a class="sobtn download" target="_blank" href="{l}"><i class="fa fa-download"></i>{n}</a> </div>"""
+        link = DL.get("DUB")
         if link:
-            dub += f"""<div class="sitem"> <a class="sobtn download" target="_blank" href="{link}"><i class="fa fa-download"></i>Download</a> </div>"""
+            for n, l in link.items():
+                dldub += f"""<div class="sitem"> <a class="sobtn download" target="_blank" href="{l}"><i class="fa fa-download"></i>{n}</a> </div>"""
 
-    if sub != '':
+    if sub != "":
         t4 = f"""<div class="server"> <div class="stitle"> <i class="fa fa-closed-captioning"></i>SUB: </div><div class="slist">{sub}</div></div>"""
     else:
-        t4 = ''
+        t4 = ""
 
-    if dub != '':
+    if dub != "":
         t5 = f""" <div class="server sd"> <div class="stitle"> <i class="fa fa-microphone-alt"></i>DUB: </div><div class="slist">{dub}</div></div>"""
     else:
-        t5 = ''
+        t5 = ""
 
-    return t4 + t5, defa
+    if dlsub != "":
+        t6 = f""" <div class="server"> <div class="stitle"> <i class="fa fa-closed-captioning"></i>SUB: </div><div class="slist">{dlsub}</div></div>"""
+    else:
+        t6 = ""
+
+    if dldub != "":
+        t7 = f""" <div class="server sd"> <div class="stitle"> <i class="fa fa-microphone-alt"></i>DUB: </div><div class="slist">{dldub}</div></div>"""
+    else:
+        t7 = ""
+
+    t8 = f"""<a id="showdl" onclick="showDownload()"><i class="fa fa-download"></i>Download</a><div id="dldiv" class="dldiv"><h4 id="download">Download Links:</h4>{t6}{t7}</div>"""
+
+    return t4 + t5 + t8, defa
